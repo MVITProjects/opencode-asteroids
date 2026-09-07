@@ -16,5 +16,5 @@
 
 ## Conventions
 
-- Comments and in-game HUD text are in Spanish; the README is in English. Keep that split.
+- All user-facing text (including the in-game HUD) is in English. Keep it that way.
 - Style: single quotes, semicolons, 2-space indent, section banner comments (`// ── Name ──`).

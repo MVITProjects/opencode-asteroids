@@ -1,0 +1,52 @@
+'use strict';
+
+const SKINS = [
+  {
+    name: 'Classic',
+    color: '#fff',
+    flame: 'rgba(255, 130, 0, 0.85)',
+    verts: [[20, 0], [-12, -9], [-7, 0], [-12, 9]],
+    nose: 21,
+    flameBase: { x: -8, halfWidth: 4 },
+  },
+  {
+    name: 'Raptor',
+    color: '#0ff',
+    flame: 'rgba(0, 220, 255, 0.85)',
+    verts: [[24, 0], [-10, -6], [-8, -2], [-14, 0], [-8, 2], [-10, 6]],
+    nose: 25,
+    flameBase: { x: -10, halfWidth: 2 },
+  },
+  {
+    name: 'Manta',
+    color: '#ff0',
+    flame: 'rgba(255, 200, 0, 0.85)',
+    verts: [[22, 0], [-6, -10], [-10, -4], [-10, 4], [-6, 10]],
+    nose: 23,
+    flameBase: { x: -8, halfWidth: 3 },
+  },
+  {
+    name: 'Talon',
+    color: '#f44',
+    flame: 'rgba(255, 60, 20, 0.85)',
+    verts: [[18, 0], [8, -10], [-4, -6], [-14, 0], [-4, 6], [8, 10]],
+    nose: 19,
+    flameBase: { x: -10, halfWidth: 3 },
+  },
+  {
+    name: 'Arrow',
+    color: '#0f0',
+    flame: 'rgba(100, 255, 80, 0.85)',
+    verts: [[28, 0], [-4, -5], [-10, -3], [-10, 3], [-4, 5]],
+    nose: 29,
+    flameBase: { x: -8, halfWidth: 3 },
+  },
+  {
+    name: 'Ghost',
+    color: '#f0f',
+    flame: 'rgba(220, 80, 255, 0.85)',
+    verts: [[16, -6], [12, -10], [0, -11], [-12, -8], [-14, 0], [-12, 8], [0, 11], [12, 10], [16, 6]],
+    nose: 17,
+    flameBase: { x: -10, halfWidth: 4 },
+  },
+];

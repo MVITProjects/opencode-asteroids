@@ -70,6 +70,11 @@ const BOOST_TIME   = 5;      // speed effect duration
 const BOOST_MULT   = 2;      // speed multiplier
 const TRIPLE_TIME  = 5;      // triple-shot effect duration
 
+const SHIELD_TIME     = 5;    // shield duration
+const SHIELD_BLINK    = 1.5;  // final seconds blinking before expiring
+const SHIELD_HIT_COST = 0.5;  // seconds of shield lost per asteroid size
+const SHIELD_RADIUS   = 24;   // shield ring radius around ship
+
 class Asteroid {
   constructor(x, y, size = 3) {
     this.x    = x;
@@ -200,7 +205,7 @@ class ShootingStar extends Asteroid {
 
 // ── Powerup (speed) ───────────────────────────────────────────────────────────
 class Powerup {
-  constructor(x, y, type) {
+  constructor(x, y, type = 'speed') {
     this.type   = type;
     this.x     = x;
     this.y     = y;
@@ -247,30 +252,47 @@ class Powerup {
       ctx.moveTo( 6, -7);
       ctx.lineTo( 6,  7);
       ctx.stroke();
+    } else if (this.type === 'shield') {
+      ctx.strokeStyle = 'rgba(125, 255, 176, 0.55)';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
+      ctx.stroke();
 
-      ctx.restore();
-      return;
+      // Shield glyph
+      ctx.strokeStyle = '#7dff96';
+      ctx.lineWidth   = 1.5;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 0, -8);
+      ctx.lineTo( 7, -4);
+      ctx.lineTo( 7,  2);
+      ctx.lineTo( 0,  8);
+      ctx.lineTo(-7,  2);
+      ctx.lineTo(-7, -4);
+      ctx.closePath();
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.55)';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Yellow lightning bolt
+      ctx.strokeStyle = '#ff0';
+      ctx.lineWidth   = 1.5;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo( 2, -8);
+      ctx.lineTo(-3,  0);
+      ctx.lineTo( 1,  0);
+      ctx.lineTo(-2,  8);
+      ctx.lineTo( 4, -1);
+      ctx.lineTo( 0, -1);
+      ctx.closePath();
+      ctx.stroke();
     }
-
-    ctx.strokeStyle = 'rgba(0, 255, 255, 0.55)';
-    ctx.lineWidth   = 1.5;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Yellow lightning bolt
-    ctx.strokeStyle = '#ff0';
-    ctx.lineWidth   = 1.5;
-    ctx.lineJoin    = 'round';
-    ctx.beginPath();
-    ctx.moveTo( 2, -8);
-    ctx.lineTo(-3,  0);
-    ctx.lineTo( 1,  0);
-    ctx.lineTo(-2,  8);
-    ctx.lineTo( 4, -1);
-    ctx.lineTo( 0, -1);
-    ctx.closePath();
-    ctx.stroke();
 
     ctx.restore();
   }
@@ -292,6 +314,7 @@ class Ship {
     this.shootCooldown = 0;
     this.speedBoost    = 0;
     this.tripleShot    = 0;
+    this.shield        = 0;
     this.dead          = false;
   }
 
@@ -301,6 +324,7 @@ class Ship {
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.speedBoost    > 0) this.speedBoost    -= dt;
     if (this.tripleShot    > 0) this.tripleShot    -= dt;
+    if (this.shield        > 0) this.shield        -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = 260;  // px/s²
@@ -336,13 +360,32 @@ class Ship {
 
   draw() {
     if (this.dead) return;
+
+    // Shield ring (visible even during invincibility blink)
+    if (this.shield > 0) {
+      const blink = this.shield < SHIELD_BLINK && Math.floor(this.shield * 10) % 2 === 0;
+      if (!blink) {
+        ctx.save();
+        const alpha = 0.25 + 0.1 * Math.sin(Date.now() * 0.008);
+        ctx.strokeStyle = `rgba(125, 255, 176, ${alpha + 0.2})`;
+        ctx.fillStyle   = `rgba(125, 255, 176, ${alpha})`;
+        ctx.lineWidth   = 1.5;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, SHIELD_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Blink during respawn invincibility
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) return;
 
     const skin = SKINS[skinIndex];
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-ctx.strokeStyle = this.tripleShot > 0 ? '#f0f' : (this.speedBoost > 0 ? '#0ff' : skin.color);
+    ctx.strokeStyle = this.tripleShot > 0 ? '#f0f' : (this.speedBoost > 0 ? '#0ff' : skin.color);
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
 
@@ -538,7 +581,7 @@ function update(dt) {
         score += a.points;
         explode(a.x, a.y, a.size * 5);
         if (Math.random() < POWERUP_DROP)
-          powerups.push(new Powerup(a.x, a.y, Math.random() < 0.5 ? 'speed' : 'triple'));
+          powerups.push(new Powerup(a.x, a.y, ['speed', 'shield', 'triple'][Math.floor(Math.random() * 3)]));
         newAsteroids.push(...a.split());
       }
     }
@@ -547,7 +590,15 @@ function update(dt) {
   bullets   = bullets.filter(b => !b.dead);
 
   // Ship vs asteroid
-  if (ship.invincible <= 0) {
+  if (ship.shield > 0) {
+    for (const a of asteroids) {
+      if (!a.dead && dist(ship, a) < SHIELD_RADIUS + a.radius * 0.82) {
+        a.dead = true;
+        explode(a.x, a.y, a.size * 5);
+        ship.shield = Math.max(0, ship.shield - SHIELD_HIT_COST * a.size);
+      }
+    }
+  } else if (ship.invincible <= 0) {
     for (const a of asteroids) {
       if (dist(ship, a) < ship.radius + a.radius * 0.82) {
         killShip();
@@ -560,8 +611,13 @@ function update(dt) {
   for (const p of powerups) {
     if (!p.dead && dist(ship, p) < ship.radius + p.radius) {
       p.dead = true;
-      if (p.type === 'speed') ship.speedBoost = BOOST_TIME;
-      else                    ship.tripleShot = TRIPLE_TIME;
+      if (p.type === 'shield') {
+        ship.shield = SHIELD_TIME;
+      } else if (p.type === 'speed') {
+        ship.speedBoost = BOOST_TIME;
+      } else {
+        ship.tripleShot = TRIPLE_TIME;
+      }
       explode(ship.x, ship.y, 6);
     }
   }
@@ -599,16 +655,24 @@ function drawHUD() {
   ctx.textAlign = 'center';
   ctx.fillText(`LEVEL ${level}`, W / 2, 26);
 
+  let effectY = 44;
   if (ship.speedBoost > 0) {
     ctx.fillStyle = '#0ff';
     ctx.font      = '12px monospace';
-    ctx.fillText(`SPEED x${BOOST_MULT}  ${ship.speedBoost.toFixed(1)}s`, W / 2, 44);
+    ctx.fillText(`SPEED x${BOOST_MULT}  ${ship.speedBoost.toFixed(1)}s`, W / 2, effectY);
+    effectY += 16;
+  }
+  if (ship.shield > 0) {
+    ctx.fillStyle = '#7dff96';
+    ctx.font      = '12px monospace';
+    ctx.fillText(`SHIELD  ${ship.shield.toFixed(1)}s`, W / 2, effectY);
+    effectY += 16;
   }
 
   if (ship.tripleShot > 0) {
     ctx.fillStyle = '#f0f';
     ctx.font      = '12px monospace';
-    ctx.fillText(`TRIPLE SHOT  ${ship.tripleShot.toFixed(1)}s`, W / 2, 62);
+    ctx.fillText(`TRIPLE SHOT  ${ship.tripleShot.toFixed(1)}s`, W / 2, effectY);
   }
 
   for (let i = 0; i < lives; i++)

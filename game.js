@@ -297,7 +297,7 @@ class Ship {
   tryShoot() {
     if (this.shootCooldown > 0 || this.dead) return [];
     this.shootCooldown = 0.2;
-    const NOSE = 21;
+    const NOSE = SKINS[skinIndex].nose;
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
     return [new Bullet(ox, oy, this.angle)];
@@ -305,32 +305,30 @@ class Ship {
 
   draw() {
     if (this.dead) return;
-    // Blink during respawn invincibility
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) return;
 
+    const skin = SKINS[skinIndex];
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = this.speedBoost > 0 ? '#0ff' : '#fff';
+    ctx.strokeStyle = this.speedBoost > 0 ? '#0ff' : skin.color;
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
 
-    // Classic silhouette: triangle with rear notch
     ctx.beginPath();
-    ctx.moveTo( 20,  0);   // nose
-    ctx.lineTo(-12, -9);   // left wing
-    ctx.lineTo( -7,  0);   // rear notch
-    ctx.lineTo(-12,  9);   // right wing
+    ctx.moveTo(skin.verts[0][0], skin.verts[0][1]);
+    for (let i = 1; i < skin.verts.length; i++)
+      ctx.lineTo(skin.verts[i][0], skin.verts[i][1]);
     ctx.closePath();
     ctx.stroke();
 
-    // Thruster flame
     if (this.thrusting && Math.random() > 0.35) {
+      const fb = skin.flameBase;
       ctx.beginPath();
-      ctx.moveTo(-8, -4);
-      ctx.lineTo(-8 - rand(6, 14), 0);
-      ctx.lineTo(-8,  4);
-      ctx.strokeStyle = 'rgba(255, 130, 0, 0.85)';
+      ctx.moveTo(fb.x, -fb.halfWidth);
+      ctx.lineTo(fb.x - rand(6, 14), 0);
+      ctx.lineTo(fb.x, fb.halfWidth);
+      ctx.strokeStyle = skin.flame;
       ctx.stroke();
     }
 
@@ -376,6 +374,8 @@ let score, lives, level;
 let state;      // 'playing' | 'dead' | 'gameover'
 let deadTimer;
 let starTimer;
+let skinIndex = 0;
+let skinToast = 0;
 
 function spawnAsteroids(count) {
   const SAFE_DIST = 130;
@@ -446,6 +446,12 @@ function killShip() {
 
 // ── Update ────────────────────────────────────────────────────────────────────
 function update(dt) {
+  if (pressed('KeyC')) {
+    skinIndex = (skinIndex + 1) % SKINS.length;
+    skinToast = 2;
+  }
+  if (skinToast > 0) skinToast -= dt;
+
   if (state === 'gameover') {
     if (pressed('Space')) initGame();
     particles.forEach(p => p.update(dt));
@@ -533,17 +539,18 @@ function update(dt) {
 
 // ── Draw ──────────────────────────────────────────────────────────────────────
 function drawLifeIcon(x, y) {
+  const skin = SKINS[skinIndex];
+  const s = 0.5;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-Math.PI / 2);
-  ctx.strokeStyle = '#fff';
+  ctx.strokeStyle = skin.color;
   ctx.lineWidth   = 1.2;
   ctx.lineJoin    = 'round';
   ctx.beginPath();
-  ctx.moveTo( 9,  0);
-  ctx.lineTo(-6, -5);
-  ctx.lineTo(-3,  0);
-  ctx.lineTo(-6,  5);
+  ctx.moveTo(skin.verts[0][0] * s, skin.verts[0][1] * s);
+  for (let i = 1; i < skin.verts.length; i++)
+    ctx.lineTo(skin.verts[i][0] * s, skin.verts[i][1] * s);
   ctx.closePath();
   ctx.stroke();
   ctx.restore();
@@ -567,6 +574,14 @@ function drawHUD() {
 
   for (let i = 0; i < lives; i++)
     drawLifeIcon(W - 16 - i * 22, 18);
+
+  if (skinToast > 0) {
+    const alpha = Math.min(1, skinToast);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = `rgba(255,255,255,${(alpha * 0.55).toFixed(2)})`;
+    ctx.font = '12px monospace';
+    ctx.fillText(`SKIN  ${SKINS[skinIndex].name}`, W / 2, 60);
+  }
 
 }
 

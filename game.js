@@ -65,9 +65,10 @@ const POINTS = [0, 100, 50, 20];  // points by size
 // ── Powerup (speed) ───────────────────────────────────────────────────────────
 const POWERUP_DROP = 0.12;   // chance to drop when an asteroid is destroyed
 const POWERUP_TTL  = 8;      // seconds before despawning
-const BOOST_TIME   = 5;      // effect duration
+const POWERUP_BLINK = 2.5;   // final seconds blinking before expiring
+const BOOST_TIME   = 5;      // speed effect duration
 const BOOST_MULT   = 2;      // speed multiplier
-const BOOST_BLINK  = 2.5;    // final seconds blinking before expiring
+const TRIPLE_TIME  = 5;      // triple-shot effect duration
 
 class Asteroid {
   constructor(x, y, size = 3) {
@@ -199,7 +200,9 @@ class ShootingStar extends Asteroid {
 
 // ── Powerup (speed) ───────────────────────────────────────────────────────────
 class Powerup {
-  constructor(x, y) {
+  constructor(x, y, type) {
+    this.type   = type;
+    this.x     = x;
     this.x     = x;
     this.y     = y;
     this.radius = 11;
@@ -221,10 +224,34 @@ class Powerup {
 
   draw() {
     // Blink before expiring
-    if (this.ttl < BOOST_BLINK && Math.floor(this.ttl * 8) % 2 === 0) return;
+    if (this.ttl < POWERUP_BLINK && Math.floor(this.ttl * 8) % 2 === 0) return;
 
     ctx.save();
     ctx.translate(this.x, this.y);
+
+    if (this.type === 'triple') {
+      ctx.strokeStyle = 'rgba(255, 0, 255, 0.55)';
+      ctx.lineWidth   = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Three parallel shot lines
+      ctx.strokeStyle = '#f0f';
+      ctx.lineWidth   = 2;
+      ctx.lineJoin    = 'round';
+      ctx.beginPath();
+      ctx.moveTo(-6, -7);
+      ctx.lineTo(-6,  7);
+      ctx.moveTo( 0, -7);
+      ctx.lineTo( 0,  7);
+      ctx.moveTo( 6, -7);
+      ctx.lineTo( 6,  7);
+      ctx.stroke();
+
+      ctx.restore();
+      return;
+    }
 
     ctx.strokeStyle = 'rgba(0, 255, 255, 0.55)';
     ctx.lineWidth   = 1.5;
@@ -265,6 +292,7 @@ class Ship {
     this.invincible    = 3;
     this.shootCooldown = 0;
     this.speedBoost    = 0;
+    this.tripleShot    = 0;
     this.dead          = false;
   }
 
@@ -273,6 +301,7 @@ class Ship {
     if (this.invincible    > 0) this.invincible    -= dt;
     if (this.shootCooldown > 0) this.shootCooldown -= dt;
     if (this.speedBoost    > 0) this.speedBoost    -= dt;
+    if (this.tripleShot    > 0) this.tripleShot    -= dt;
 
     const ROT   = 3.5;   // rad/s
     const THRUST = 260;  // px/s²
@@ -300,7 +329,10 @@ class Ship {
     const NOSE = 21;
     const ox = this.x + Math.cos(this.angle) * NOSE;
     const oy = this.y + Math.sin(this.angle) * NOSE;
-    return [new Bullet(ox, oy, this.angle)];
+    const perp = this.angle + Math.PI / 2;
+    const offs = this.tripleShot > 0 ? [-8, 0, 8] : [0];
+    return offs.map(off =>
+      new Bullet(ox + Math.cos(perp) * off, oy + Math.sin(perp) * off, this.angle));
   }
 
   draw() {
@@ -311,7 +343,7 @@ class Ship {
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
-    ctx.strokeStyle = this.speedBoost > 0 ? '#0ff' : '#fff';
+    ctx.strokeStyle = this.tripleShot > 0 ? '#f0f' : (this.speedBoost > 0 ? '#0ff' : '#fff');
     ctx.lineWidth   = 1.5;
     ctx.lineJoin    = 'round';
 
@@ -500,7 +532,8 @@ function update(dt) {
         a.dead = true;
         score += a.points;
         explode(a.x, a.y, a.size * 5);
-        if (Math.random() < POWERUP_DROP) powerups.push(new Powerup(a.x, a.y));
+        if (Math.random() < POWERUP_DROP)
+          powerups.push(new Powerup(a.x, a.y, Math.random() < 0.5 ? 'speed' : 'triple'));
         newAsteroids.push(...a.split());
       }
     }
@@ -522,7 +555,8 @@ function update(dt) {
   for (const p of powerups) {
     if (!p.dead && dist(ship, p) < ship.radius + p.radius) {
       p.dead = true;
-      ship.speedBoost = BOOST_TIME;
+      if (p.type === 'speed') ship.speedBoost = BOOST_TIME;
+      else                    ship.tripleShot = TRIPLE_TIME;
       explode(ship.x, ship.y, 6);
     }
   }
@@ -563,6 +597,12 @@ function drawHUD() {
     ctx.fillStyle = '#0ff';
     ctx.font      = '12px monospace';
     ctx.fillText(`SPEED x${BOOST_MULT}  ${ship.speedBoost.toFixed(1)}s`, W / 2, 44);
+  }
+
+  if (ship.tripleShot > 0) {
+    ctx.fillStyle = '#f0f';
+    ctx.font      = '12px monospace';
+    ctx.fillText(`TRIPLE SHOT  ${ship.tripleShot.toFixed(1)}s`, W / 2, 62);
   }
 
   for (let i = 0; i < lives; i++)

@@ -308,7 +308,7 @@ class Ship {
     this.angle  = -Math.PI / 2;
     this.vx     = 0;
     this.vy     = 0;
-    this.radius = 12;
+    this.radius = 12 * SKINS[skinIndex].scale;
     this.thrusting     = false;
     this.invincible    = 3;
     this.shootCooldown = 0;
@@ -361,6 +361,8 @@ class Ship {
   draw() {
     if (this.dead) return;
 
+    const skin = SKINS[skinIndex];
+
     // Shield ring (visible even during invincibility blink)
     if (this.shield > 0) {
       const blink = this.shield < SHIELD_BLINK && Math.floor(this.shield * 10) % 2 === 0;
@@ -371,7 +373,7 @@ class Ship {
         ctx.fillStyle   = `rgba(125, 255, 176, ${alpha})`;
         ctx.lineWidth   = 1.5;
         ctx.beginPath();
-        ctx.arc(this.x, this.y, SHIELD_RADIUS, 0, Math.PI * 2);
+        ctx.arc(this.x, this.y, SHIELD_RADIUS * skin.scale, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
         ctx.restore();
@@ -381,7 +383,6 @@ class Ship {
     // Blink during respawn invincibility
     if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0) return;
 
-    const skin = SKINS[skinIndex];
     ctx.save();
     ctx.translate(this.x, this.y);
     ctx.rotate(this.angle);
@@ -400,7 +401,7 @@ class Ship {
       const fb = skin.flameBase;
       ctx.beginPath();
       ctx.moveTo(fb.x, -fb.halfWidth);
-      ctx.lineTo(fb.x - rand(6, 14), 0);
+      ctx.lineTo(fb.x - rand(6, 14) * skin.scale, 0);
       ctx.lineTo(fb.x, fb.halfWidth);
       ctx.strokeStyle = skin.flame;
       ctx.stroke();
@@ -523,6 +524,7 @@ function update(dt) {
   if (pressed('KeyC')) {
     skinIndex = (skinIndex + 1) % SKINS.length;
     skinToast = 2;
+    ship.radius = 12 * SKINS[skinIndex].scale;
   }
   if (skinToast > 0) skinToast -= dt;
 
@@ -578,7 +580,7 @@ function update(dt) {
       if (!a.dead && !b.dead && dist(b, a) < a.radius) {
         b.dead = true;
         a.dead = true;
-        score += a.points;
+        score += a.points * SKINS[skinIndex].scoreMult;
         explode(a.x, a.y, a.size * 5);
         if (Math.random() < POWERUP_DROP)
           powerups.push(new Powerup(a.x, a.y, ['speed', 'shield', 'triple'][Math.floor(Math.random() * 3)]));
@@ -591,8 +593,9 @@ function update(dt) {
 
   // Ship vs asteroid
   if (ship.shield > 0) {
+    const shieldR = SHIELD_RADIUS * SKINS[skinIndex].scale;
     for (const a of asteroids) {
-      if (!a.dead && dist(ship, a) < SHIELD_RADIUS + a.radius * 0.82) {
+      if (!a.dead && dist(ship, a) < shieldR + a.radius * 0.82) {
         a.dead = true;
         explode(a.x, a.y, a.size * 5);
         ship.shield = Math.max(0, ship.shield - SHIELD_HIT_COST * a.size);
@@ -629,7 +632,7 @@ function update(dt) {
 // ── Draw ──────────────────────────────────────────────────────────────────────
 function drawLifeIcon(x, y) {
   const skin = SKINS[skinIndex];
-  const s = 0.5;
+  const s = 0.5 / skin.scale;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(-Math.PI / 2);
@@ -651,6 +654,12 @@ function drawHUD() {
 
   ctx.textAlign = 'left';
   ctx.fillText(`SCORE  ${score}`, 14, 26);
+  const skin = SKINS[skinIndex];
+  if (skin.scoreMult > 1) {
+    ctx.fillStyle = skin.color;
+    ctx.fillText('x2', 14 + ctx.measureText(`SCORE  ${score}`).width + 8, 26);
+    ctx.fillStyle = '#fff';
+  }
 
   ctx.textAlign = 'center';
   ctx.fillText(`LEVEL ${level}`, W / 2, 26);

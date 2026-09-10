@@ -8,6 +8,8 @@ const SKINS = [
     verts: [[20, 0], [-12, -9], [-7, 0], [-12, 9]],
     nose: 21,
     flameBase: { x: -8, halfWidth: 4 },
+    scale: 1,
+    scoreMult: 1,
   },
   {
     name: 'Raptor',
@@ -16,6 +18,8 @@ const SKINS = [
     verts: [[24, 0], [-10, -6], [-8, -2], [-14, 0], [-8, 2], [-10, 6]],
     nose: 25,
     flameBase: { x: -10, halfWidth: 2 },
+    scale: 1,
+    scoreMult: 1,
   },
   {
     name: 'Manta',
@@ -24,6 +28,8 @@ const SKINS = [
     verts: [[22, 0], [-6, -10], [-10, -4], [-10, 4], [-6, 10]],
     nose: 23,
     flameBase: { x: -8, halfWidth: 3 },
+    scale: 1,
+    scoreMult: 1,
   },
   {
     name: 'Talon',
@@ -32,6 +38,8 @@ const SKINS = [
     verts: [[18, 0], [8, -10], [-4, -6], [-14, 0], [-4, 6], [8, 10]],
     nose: 19,
     flameBase: { x: -10, halfWidth: 3 },
+    scale: 1,
+    scoreMult: 1,
   },
   {
     name: 'Arrow',
@@ -40,6 +48,8 @@ const SKINS = [
     verts: [[28, 0], [-4, -5], [-10, -3], [-10, 3], [-4, 5]],
     nose: 29,
     flameBase: { x: -8, halfWidth: 3 },
+    scale: 1,
+    scoreMult: 1,
   },
   {
     name: 'Ghost',
@@ -48,5 +58,17 @@ const SKINS = [
     verts: [[16, -6], [12, -10], [0, -11], [-12, -8], [-14, 0], [-12, 8], [0, 11], [12, 10], [16, 6]],
     nose: 17,
     flameBase: { x: -10, halfWidth: 4 },
+    scale: 1,
+    scoreMult: 1,
+  },
+  {
+    name: 'Titan',
+    color: '#a6f',
+    flame: 'rgba(190, 100, 255, 0.85)',
+    verts: [[40, 0], [-24, -18], [-14, 0], [-24, 18]],
+    nose: 42,
+    flameBase: { x: -16, halfWidth: 8 },
+    scale: 2,
+    scoreMult: 2,
   },
 ];
